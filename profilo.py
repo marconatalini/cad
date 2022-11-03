@@ -1,7 +1,8 @@
-
+from dim import Quota, Lato
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum, auto
+from ezdxf.math import Vec2
 
 class Direzione(Enum):
     SU = 90
@@ -62,14 +63,21 @@ class Struttura_1(Struttura):
         self.base = base -8
         self.altezza = altezza
 
-        p1 = Profilo(art, self.altezza, (0, 0), Direzione.SU, 45, 45)
-        p2 = Profilo(art, self.base, (0, self.altezza), Direzione.DX, 45, 45)
-        p3 = Profilo(art, self.altezza, (self.base, self.altezza), Direzione.GIU, 45, 45)
-        p4 = Profilo(art, self.base, (self.base, 0), Direzione.SX, 45, 45)
-        self.profili = [p1, p2, p3, p4]
+        p_sx = Profilo(art, self.altezza, (0, 0), Direzione.SU, 45, 45)
+        p_su = Profilo(art, self.base, (0, self.altezza), Direzione.DX, 45, 45)
+        p_dx = Profilo(art, self.altezza, (self.base, self.altezza), Direzione.GIU, 45, 45)
+        p_giu = Profilo(art, self.base, (self.base, 0), Direzione.SX, 45, 45)
+        self.profili = [p_sx, p_su, p_dx, p_giu]
 
     def quote(self):
-        return []
+        result = []
+        larg_profilo = self.profili[0].articolo.larghezza
+        result.append(Quota(2, Vec2(larg_profilo, larg_profilo), Vec2(larg_profilo, self.altezza-larg_profilo), Lato.SX))
+        result.append(Quota(2, Vec2(larg_profilo, larg_profilo), Vec2(self.base-larg_profilo, larg_profilo), Lato.GIU))        
+        result.append(Quota(3, Vec2(0, 0), Vec2(0, self.altezza), Lato.SX))        
+        result.append(Quota(3, Vec2(0, 0), Vec2(self.base, 0), Lato.GIU))        
+
+        return result
 
 
 if __name__ == '__main__':

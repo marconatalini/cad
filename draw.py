@@ -12,7 +12,7 @@ from panel import Ametista4, Panel
 from profilo import Direzione, Profilo
 from lamiera import Incisione, Lamiera
 
-OFFSET_DIM_BASE = 100
+OFFSET_DIM_BASE = 200
 
 def set_offset_quota(dim: Quota):
     dim.offset = dim.row * OFFSET_DIM_BASE
@@ -73,10 +73,10 @@ class Cad():
         self.msp.add_lwpolyline(ocs_point, close=True, dxfattribs={"layer" : "Lamiera-Coprifili"})
     
     def quotatura(self, lista_quote: list, layer: str = 'Quote'):
-        quote = map(set_offset_quota, lista_quote)
-        for q in list(quote):
+        # quote = map(set_offset_quota, lista_quote)
+        for q in lista_quote:
             dim = self.msp.add_linear_dim(
-                base=q.get_punto_base(),  # location of the dimension line
+                base=q.get_punto_base(OFFSET_DIM_BASE),  # location of the dimension line
                 p1=q.p1,  # 1st measurement point
                 p2=q.p2,  # 2nd measurement point
                 angle=q.get_angle(), # angle dimension
@@ -100,16 +100,16 @@ class Cad():
         
         for profilo in self.panel.struttura.profili:
             self.draw_profilo(profilo, True)
+        self.quotatura(self.panel.struttura.quote(), 'Quote_AluAnta_1')
 
         for profilo in self.panel.supporti:
             self.draw_profilo(profilo, True)
+        self.quotatura(self.panel.quote_supporti(), 'Quote_AluAnta_1')
 
         self.draw_lamiera(self.panel.lamiera)
-        self.quotatura(self.panel.lamiera.quote(), 'Quote_Alu_Lamiera')
-
         for incisione in self.panel.lamiera.incisioni:
             self.draw_incisione(incisione)
-
+        self.quotatura(self.panel.lamiera.quote(), 'Quote_Alu_Lamiera')
 
         zoom.extents(self.msp)
         self.doc.saveas(f"{self.nome_disegno}.dxf")

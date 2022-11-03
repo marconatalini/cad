@@ -1,6 +1,6 @@
 from abc import ABC
 from dataclasses import dataclass
-from dim import Quota
+from dim import Quota, Lato
 from profilo import Direzione
 
 from ezdxf.math import Vec2
@@ -44,7 +44,7 @@ class Lamiera_sormonto(Lamiera):
     '''definizione Lamiera'''
 
     def __init__(self, base: int, altezza: int, piega: int):
-        super().__init__(base, altezza)
+        super().__init__(base, altezza, piega)
         self.base_lamiera = base -8 +(2* self.piega)
 
     def coords(self):
@@ -53,8 +53,8 @@ class Lamiera_sormonto(Lamiera):
 
     def quote(self):
         result = []
-        result.append(Quota(1, Vec2(-self.piega, 0), Vec2(-self.piega, self.altezza_lamiera), Direzione.SX))
-        result.append(Quota(1, Vec2(-self.piega, 0), Vec2(self.base_lamiera-self.piega, 0), Direzione.GIU))        
+        result.append(Quota(1, Vec2(-self.piega, 0), Vec2(-self.piega, self.altezza_lamiera), Lato.SX))
+        result.append(Quota(1, Vec2(-self.piega, 0), Vec2(self.base_lamiera-self.piega, 0), Lato.GIU))        
 
         y_quote_incisioni = [0]
         for incisione in self.incisioni:
@@ -66,7 +66,7 @@ class Lamiera_sormonto(Lamiera):
             result.append(Quota(1,
                 Vec2(x, y_quote_incisioni[i]),
                 Vec2(x, y_quote_incisioni[i+1]),
-                Direzione.DX ))
+                Lato.DX ))
             
         return result
 

@@ -4,6 +4,7 @@ from enum import Enum, auto
 
 from lamiera import Lamiera, Incisione, Lamiera_sormonto
 from profilo import Articolo, Direzione, Profilo, Struttura, Struttura_1
+from dim import Quota, Lato
 
 class Apertura(Enum):
     TIRARE_DESTRA = auto()
@@ -41,6 +42,24 @@ class Ametista4(Panel):
         self.supporti.append(Profilo(art, self.altezza - art.larghezza*2, (self.base - 144, self.altezza - art.larghezza,0), Direzione.GIU))
         if self.base - (144*2) > 400:
             self.supporti.append(Profilo(art, self.altezza - art.larghezza*2, (415, art.larghezza,0), Direzione.SU))
+
+    def quote_supporti(self) -> list:
+        result = []
+        p_largh = self.struttura.profili[0].articolo.larghezza
+        x_quote = [0+p_largh,self.base-p_largh]
+
+        for supporto in self.supporti:
+            x_quote.append(supporto.punto_partenza[0])
+            x_quote.append(supporto.punto_partenza[0]+supporto.articolo.larghezza)
+        
+        sort_x = sorted(x_quote)
+        print(sort_x)
+        for i, value in enumerate(sort_x[:-1]):
+            q = Quota(1, (sort_x[i], 0), (sort_x[i+1], 0), Lato.GIU)
+            if q.lunghezza_quota() > p_largh:
+                result.append(q)
+        print(result)
+        return result
 
     def set_incisioni(self) -> list:
         # da_sotto = int(input(f"Misura prima incisione da sotto lamiera? "))
