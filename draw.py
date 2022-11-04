@@ -27,12 +27,14 @@ class Cad():
         self.nome_disegno = f"{panel.__class__.__name__}_{panel.base}x{panel.altezza}"
         self.doc = ezdxf.new(setup=True)
         self.doc.units = units.MM
+        self.doc.styles.new('tahoma', dxfattribs={'font' : 'Tahoma.ttf'})
         setup_dimstyle(self.doc, "EZ_MM_1_H25_MM")
         my_dimstyle = setup_dimstyle(
                             self.doc,
                             name="MARCO",
                             fmt="EZ_MM_1_H25_MM",
                             # style=options.default_dimension_text_style,
+                            style='tahoma',
                             blk=ARROWS.closed_filled,
                         )
         my_dimstyle.dxf.dimscale = 10  
@@ -56,7 +58,7 @@ class Cad():
         
             self.msp.add_text(profilo.articolo.codice, rotation=profilo.direzione.value, 
                 height=profilo.articolo.larghezza * .8,
-                dxfattribs={'layer': 'Quote_AluAnta_1',}
+                dxfattribs={'layer': 'Quote_AluAnta_1', 'style': 'tahoma'}
                 ).set_pos(center, align='MIDDLE_CENTER')
 
     def draw_lamiera(self, lamiera: Lamiera):
@@ -109,6 +111,6 @@ class Cad():
         self.doc.saveas(f"{self.nome_disegno}.dxf")
 
 if __name__ == '__main__':
-    p = Ametista4(985,2130)
+    p = Ametista4(1003,2230)
     d = Cad(p)
     d.save()
