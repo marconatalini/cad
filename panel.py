@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from curses.ascii import alt
 from enum import Enum, auto
+
+from ezdxf.math import Vec2
 
 from lamiera import Lamiera, Incisione, Lamiera_sormonto
 from profilo import Articolo, Direzione, Profilo, Struttura, Struttura_1
@@ -53,23 +54,20 @@ class Ametista4(Panel):
             x_quote.append(supporto.punto_partenza[0]+supporto.articolo.larghezza)
         
         sort_x = sorted(x_quote)
-        print(sort_x)
         for i, value in enumerate(sort_x[:-1]):
-            q = Quota(1, (sort_x[i], 0), (sort_x[i+1], 0), Lato.GIU)
+            q = Quota(1, Vec2(sort_x[i], 0), Vec2(sort_x[i+1], 0), Lato.GIU)
             if q.lunghezza_quota() > p_largh:
                 result.append(q)
-        print(result)
         return result
 
     def set_incisioni(self) -> list:
-        # da_sotto = int(input(f"Misura prima incisione da sotto lamiera? "))
-        # da_sopra = int(input(f"Misura ultima incisione da sopra lamiera? "))
+        # da_sotto = int(input(f"Misura prima incisione da sotto lamiera? 0 = equidistanti : "))
+        # da_sopra = int(input(f"Misura ultima incisione da sopra lamiera? 0 = equidistanti : "))
         da_sotto = 250
         da_sopra = 200
         for i in range(self.NUMERO_INCISIONI):
             y = da_sotto + i *((self.altezza-da_sopra-da_sotto) / (self.NUMERO_INCISIONI-1))
             self.lamiera.add_incisione(Incisione(self.base, (0,int(y),0), Direzione.ORIZZONTALE))
         
-
 if __name__ == '__main__':
     pass

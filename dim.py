@@ -32,8 +32,7 @@ class Quota():
     def lunghezza_quota(self):
         x1,y1 = self.p1
         x2,y2 = self.p2
-        res = ((x2-x1)**2 + (y2-y1)**2)**-2
-        print(x2,x1,(x2-x1)**2,y2,y1,(y2-y1)**2,res)
+        res = ((x2-x1)**2 + (y2-y1)**2)**(1/2) # pitagora
         return res
         
 if __name__ == '__main__':

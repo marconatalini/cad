@@ -1,4 +1,3 @@
-from cgi import print_arguments
 import math
 import ezdxf
 from ezdxf.math import UCS, intersection_line_line_3d, Vec2
@@ -13,10 +12,6 @@ from profilo import Direzione, Profilo
 from lamiera import Incisione, Lamiera
 
 OFFSET_DIM_BASE = 200
-
-def set_offset_quota(dim: Quota):
-    dim.offset = dim.row * OFFSET_DIM_BASE
-    return dim
 
 class Cad():
 
@@ -73,7 +68,6 @@ class Cad():
         self.msp.add_lwpolyline(ocs_point, close=True, dxfattribs={"layer" : "Lamiera-Coprifili"})
     
     def quotatura(self, lista_quote: list, layer: str = 'Quote'):
-        # quote = map(set_offset_quota, lista_quote)
         for q in lista_quote:
             dim = self.msp.add_linear_dim(
                 base=q.get_punto_base(OFFSET_DIM_BASE),  # location of the dimension line
