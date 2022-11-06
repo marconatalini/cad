@@ -4,9 +4,10 @@ from ezdxf.math import UCS, intersection_line_line_3d, Vec2
 from ezdxf import units, zoom
 from ezdxf.tools.standards import setup_dimstyle
 from ezdxf.render.arrows import ARROWS
-from dim import Quota
+from dim import Lato, Quota
 
-from panel import Ametista4, Panel
+import panel
+from typing import List
 
 from profilo import Direzione, Profilo
 from lamiera import Incisione, Lamiera
@@ -14,6 +15,8 @@ from lamiera import Incisione, Lamiera
 OFFSET_DIM_BASE = 200
 
 class Cad():
+
+    supporti_points = []
 
     layers_dict = {
         "Alluminio_ante_1": 6,
@@ -23,7 +26,7 @@ class Cad():
         "Quote_AluAnta_1": 3,
     }
 
-    def __init__(self, panel: Panel) -> None:
+    def __init__(self, panel: panel.Panel) -> None:
         self.nome_disegno = f"{panel.__class__.__name__}_{panel.base}x{panel.altezza}"
         self.doc = ezdxf.new(setup=True)
         self.doc.units = units.MM
@@ -48,9 +51,9 @@ class Cad():
             self.doc.layers.add(name=key, color=value)
 
         
-    def draw_profilo(self, profilo: Profilo, with_text = False):
+    def draw_profilo(self, profilo: Profilo, with_text = False) -> List[Vec2]:
         ucs = self._ucs(profilo.punto_partenza, profilo.direzione)
-        ocs_point = list(ucs.points_to_ocs(profilo.coords()))
+        ocs_point = list(ucs.points_to_ocs(profilo.coords))
         self.msp.add_lwpolyline(ocs_point, close=True, dxfattribs={"layer" : "Alluminio_ante_1"})
         if with_text:
             # Using a text style
@@ -60,13 +63,18 @@ class Cad():
                 height=profilo.articolo.larghezza * .8,
                 dxfattribs={'layer': 'Quote_AluAnta_1', 'style': 'tahoma'}
                 ).set_pos(center, align='MIDDLE_CENTER')
+        
+        return ocs_point
+
+    def draw_supporto(self, profilo: Profilo, with_text = False):
+        self.supporti_points += self.draw_profilo(profilo, with_text)
 
     def draw_lamiera(self, lamiera: Lamiera):
-        self.msp.add_lwpolyline(lamiera.coords(), close=True, dxfattribs={"layer" : "Lamiera-Coprifili"})
+        self.msp.add_lwpolyline(lamiera.coords, close=True, dxfattribs={"layer" : "Lamiera-Coprifili"})
 
     def draw_incisione(self, incisione: Incisione):
         ucs = self._ucs(incisione.punto_partenza, incisione.direzione)
-        ocs_point = list(ucs.points_to_ocs(incisione.coords()))
+        ocs_point = list(ucs.points_to_ocs(incisione.coords))
         self.msp.add_lwpolyline(ocs_point, close=True, dxfattribs={"layer" : "Lamiera-Coprifili"})
     
     def quotatura(self, lista_quote: list, layer: str = 'Quote'):
@@ -80,8 +88,24 @@ class Cad():
                 dxfattribs={'layer': layer,}
             ).render()
 
+    def quotatura_supporti_verticali(self):
+        strut = self.panel.struttura
+        self.supporti_points.append(Vec2(strut.profilo_sx.articolo.larghezza, 0)) #interno montante sx
+        self.supporti_points.append(Vec2(strut.base - strut.profilo_dx.articolo.larghezza, 0)) #interno montante dx
+        x_quote = sorted(set(list(map(lambda v: round(v.x,1), self.supporti_points))))
 
-    def _ucs(self, origin: tuple, direzione: Direzione) -> UCS:
+        for i, value in enumerate(x_quote[:-1]):
+            q = Quota(1, Vec2(x_quote[i], 0), Vec2(x_quote[i+1], 0), Lato.GIU)
+            print(q)
+            if q.lunghezza_quota() > 50:
+                self.quotatura([q,], 'Quote_AluAnta_1')
+
+    def quotatura_supporti_orizzontali(self):
+        y_quote = sorted(set(list(map(lambda v: round(v.y,1), self.supporti_points))))
+        print(y_quote)
+    
+
+    def _ucs(self, origin: Vec2, direzione: Direzione) -> UCS:
         ucs = UCS(origin)
         if direzione == Direzione.SU or direzione == Direzione.VERTICALE: 
             ucs = ucs.rotate_local_z(math.radians(Direzione.SU.value))
@@ -96,21 +120,23 @@ class Cad():
         
         for profilo in self.panel.struttura.profili:
             self.draw_profilo(profilo, True)
-        self.quotatura(self.panel.struttura.quote(), 'Quote_AluAnta_1')
+        self.quotatura(self.panel.struttura.quote, 'Quote_AluAnta_1')
 
         for profilo in self.panel.supporti:
-            self.draw_profilo(profilo, True)
-        self.quotatura(self.panel.quote_supporti(), 'Quote_AluAnta_1')
+            self.draw_supporto(profilo, True)
+        self.quotatura_supporti_verticali()
+        self.quotatura_supporti_orizzontali()
 
         self.draw_lamiera(self.panel.lamiera)
-        for incisione in self.panel.lamiera.incisioni:
+        for incisione in list(self.panel.lamiera.incisioni):
             self.draw_incisione(incisione)
-        self.quotatura(self.panel.lamiera.quote(), 'Quote_Alu_Lamiera')
+        self.quotatura(self.panel.lamiera.quote, 'Quote_Alu_Lamiera')
 
+        
         zoom.extents(self.msp)
         self.doc.saveas(f"{self.nome_disegno}.dxf")
 
 if __name__ == '__main__':
-    p = Ametista4(1003,2230)
+    p = panel.Ametista_42_a_sormonto(980, 2240)
     d = Cad(p)
     d.save()

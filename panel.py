@@ -1,73 +1,108 @@
 from abc import ABC, abstractmethod
 from enum import Enum, auto
+from typing import List
 
 from ezdxf.math import Vec2
 
 from lamiera import Lamiera, Incisione, Lamiera_sormonto
-from profilo import Articolo, Direzione, Profilo, Struttura, Struttura_1
+from profilo import Articolo, Direzione, Profilo, Struttura, Struttura_normale
 from dim import Quota, Lato
 
 class Apertura(Enum):
     TIRARE_DESTRA = auto()
     TIRARE_SINISTRA = auto()
 
-class Panel(ABC):
 
-    def __init__(self, base: int, altezza: int, apertura: Apertura = Apertura.TIRARE_DESTRA) -> None:
+class Panel(ABC):
+    base : int
+    altezza : int
+    apertura : Apertura = Apertura.TIRARE_DESTRA
+    numero_incisioni : int
+    struttura : Struttura
+    lamiera : Lamiera
+    supporti : List[Profilo]
+
+    @abstractmethod
+    def __init__(self) -> None:
         '''Pannello creto sulla misura dell'anta di alluminio'''
+
+    @abstractmethod
+    def set_supporti(self) -> None:
+        '''definisce i supporti necessari per questo pannello'''
+
+    @abstractmethod
+    def set_incisioni(self) -> None:
+        '''aggiunge le incisioni alla lamiera di questo pannello'''
+
+
+class Ametista_a_sormonto(Panel):
+    '''Definizione del modello Ametista generico'''
+
+    def __init__(self, base: int, altezza: int, numero_incisioni: int) -> None:
         self.base = base -8
         self.altezza = altezza
-        self.apertura = apertura
-        self.struttura = Struttura(base, altezza)
-        self.supporti = []
-        self.lamiera = Lamiera(base, altezza)
-
-
-class Ametista4(Panel):
-    '''Definizione del modello Ametista'''
-
-    NUMERO_INCISIONI = 4
-
-    def __init__(self, base: int, altezza: int, apertura: Apertura = Apertura.TIRARE_DESTRA) -> None:
-        super().__init__(base, altezza, apertura)
-        
-        self.struttura = Struttura_1(base, altezza)
+        self.numero_incisioni = numero_incisioni
+        self.struttura = Struttura_normale(base, altezza)
         self.lamiera = Lamiera_sormonto(base, altezza, 17)
+        self.supporti = []
         
         self.set_supporti()
         self.set_incisioni()
 
-    def set_supporti(self) -> list:
+    def set_supporti(self) -> None:
         art = Articolo('AP31.110', 31)    
         self.supporti.append(Profilo(art, self.altezza - art.larghezza*2, (144, art.larghezza,0), Direzione.SU))
         self.supporti.append(Profilo(art, self.altezza - art.larghezza*2, (self.base - 144, self.altezza - art.larghezza,0), Direzione.GIU))
         if self.base - (144*2) > 400:
             self.supporti.append(Profilo(art, self.altezza - art.larghezza*2, (415, art.larghezza,0), Direzione.SU))
 
-    def quote_supporti(self) -> list:
-        result = []
-        p_largh = self.struttura.profili[0].articolo.larghezza
-        x_quote = [0+p_largh,self.base-p_largh]
+    def set_incisioni(self) -> list:
+        if self.numero_incisioni > 3:
+            da_sotto = input_numero(f"Misura prima incisione da SOTTO lamiera? INVIO = equidistanti : ")
+            da_sopra = input_numero(f"Misura ultima incisione da SOPRA lamiera? INVIO = equidistanti : ")
+            interasse = (self.altezza - da_sopra - da_sotto) / (self.numero_incisioni + 1  - 1 * bool(da_sotto) - 1 * bool(da_sopra))
+        for i in range(self.numero_incisioni):
+            y = da_sotto + i * interasse
+            if y: self.lamiera.add_incisione(Incisione(self.base, Vec2(0, y), Direzione.ORIZZONTALE))
+        self.lamiera.set_quote_incisioni()
 
-        for supporto in self.supporti:
-            x_quote.append(supporto.punto_partenza[0])
-            x_quote.append(supporto.punto_partenza[0]+supporto.articolo.larghezza)
+class Ametista_32_a_sormonto(Ametista_a_sormonto):
+    '''Modello Ametista 3.2'''
+
+    def __init__(self, base: int, altezza: int, numero_incisioni: int = 6) -> None:
+        super().__init__(base, altezza, numero_incisioni)
+
+    def set_supporti(self) -> None:
+        return super().set_supporti()
         
-        sort_x = sorted(x_quote)
-        for i, value in enumerate(sort_x[:-1]):
-            q = Quota(1, Vec2(sort_x[i], 0), Vec2(sort_x[i+1], 0), Lato.GIU)
-            if q.lunghezza_quota() > p_largh:
-                result.append(q)
-        return result
+    def set_incisioni(self) -> list:
+        n_gruppi_incisioni = int(self.numero_incisioni/2)
+        interasse = (self.altezza - n_gruppi_incisioni * 100) / (n_gruppi_incisioni + 1)
+        for i in range(n_gruppi_incisioni + 1): # 3 gruppi di incisioni doppie
+            y = i * (interasse + 100)
+            if y: 
+                self.lamiera.add_incisione(Incisione(self.base, Vec2(0, y-100), Direzione.ORIZZONTALE))
+                self.lamiera.add_incisione(Incisione(self.base, Vec2(0, y), Direzione.ORIZZONTALE))
+        self.lamiera.set_quote_incisioni()
+
+class Ametista_42_a_sormonto(Ametista_32_a_sormonto):
+    '''Modello Ametista 4.2'''
+
+    def __init__(self, base: int, altezza: int, numero_incisioni: int = 8) -> None:
+        super().__init__(base, altezza, numero_incisioni)
+
+    def set_supporti(self) -> None:
+        return super().set_supporti()
 
     def set_incisioni(self) -> list:
-        # da_sotto = int(input(f"Misura prima incisione da sotto lamiera? 0 = equidistanti : "))
-        # da_sopra = int(input(f"Misura ultima incisione da sopra lamiera? 0 = equidistanti : "))
-        da_sotto = 250
-        da_sopra = 200
-        for i in range(self.NUMERO_INCISIONI):
-            y = da_sotto + i *((self.altezza-da_sopra-da_sotto) / (self.NUMERO_INCISIONI-1))
-            self.lamiera.add_incisione(Incisione(self.base, (0,int(y),0), Direzione.ORIZZONTALE))
-        
+        return super().set_incisioni()
+
+def input_numero(domanda: str) -> int:
+    while True:
+        n = input(domanda)
+        if not n: return 0
+        if n.isnumeric(): return int(n)
+        print("Inserire un numero! Riprova. ")
+
 if __name__ == '__main__':
-    pass
+    p = Ametista_32_a_sormonto(800,2200,4)
